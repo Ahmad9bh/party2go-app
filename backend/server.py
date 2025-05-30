@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 import cloudinary
 import cloudinary.uploader
 import googlemaps
+import stripe
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 
 ROOT_DIR = Path(__file__).parent
