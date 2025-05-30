@@ -34,7 +34,7 @@ cloudinary.config(
 )
 
 gmaps = googlemaps.Client(key=os.environ['GOOGLE_MAPS_API_KEY'])
-stripe_checkout = StripeCheckout(api_key=os.environ['STRIPE_SECRET_KEY'])
+stripe.api_key = os.environ['STRIPE_SECRET_KEY']
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
