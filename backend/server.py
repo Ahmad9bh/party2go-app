@@ -357,71 +357,93 @@ async def create_payment_session(booking_id: str, request: Request):
     success_url = f"{origin_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin_url}/payment-cancel"
     
-    # Create checkout session
-    checkout_request = CheckoutSessionRequest(
-        amount=float(booking["total_amount"]),
-        currency="usd",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "booking_id": booking_id,
-            "venue_id": booking["venue_id"],
-            "user_email": booking["user_email"]
-        }
-    )
+    # Create checkout session using standard Stripe API
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': 'Venue Booking',
+                        'description': f'Booking for venue {booking["venue_id"]}'
+                    },
+                    'unit_amount': int(booking["total_amount"] * 100),  # Convert to cents
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "booking_id": booking_id,
+                "venue_id": booking["venue_id"],
+                "user_email": booking["user_email"]
+            }
+        )
+        
+        # Create payment transaction record
+        service_fee, owner_payout = calculate_fees(booking["total_amount"])
+        payment_transaction = PaymentTransaction(
+            session_id=session.id,
+            booking_id=booking_id,
+            amount=booking["total_amount"],
+            service_fee=service_fee,
+            owner_payout=owner_payout,
+            metadata={
+                "booking_id": booking_id,
+                "venue_id": booking["venue_id"],
+                "user_email": booking["user_email"]
+            }
+        )
+        
+        await db.payment_transactions.insert_one(payment_transaction.dict())
+        await db.bookings.update_one(
+            {"id": booking_id},
+            {"$set": {"stripe_session_id": session.id}}
+        )
+        
+        return {"checkout_url": session.url, "session_id": session.id}
     
-    session = await stripe_checkout.create_checkout_session(checkout_request)
-    
-    # Create payment transaction record
-    service_fee, owner_payout = calculate_fees(booking["total_amount"])
-    payment_transaction = PaymentTransaction(
-        session_id=session.session_id,
-        booking_id=booking_id,
-        amount=booking["total_amount"],
-        service_fee=service_fee,
-        owner_payout=owner_payout,
-        metadata=checkout_request.metadata
-    )
-    
-    await db.payment_transactions.insert_one(payment_transaction.dict())
-    await db.bookings.update_one(
-        {"id": booking_id},
-        {"$set": {"stripe_session_id": session.session_id}}
-    )
-    
-    return {"checkout_url": session.url, "session_id": session.session_id}
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
 
 @api_router.get("/payments/status/{session_id}")
 async def get_payment_status(session_id: str):
-    # Get checkout status from Stripe
-    status_response = await stripe_checkout.get_checkout_status(session_id)
-    
-    # Update payment transaction
-    payment_transaction = await db.payment_transactions.find_one({"session_id": session_id})
-    if payment_transaction:
-        update_data = {
-            "payment_status": status_response.payment_status
-        }
+    try:
+        # Get checkout status from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
         
-        await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": update_data}
-        )
-        
-        # Update booking if payment successful
-        if status_response.payment_status == "paid" and payment_transaction.get("booking_id"):
-            await db.bookings.update_one(
-                {"id": payment_transaction["booking_id"]},
-                {"$set": {"payment_status": "paid", "booking_status": "confirmed"}}
+        # Update payment transaction
+        payment_transaction = await db.payment_transactions.find_one({"session_id": session_id})
+        if payment_transaction:
+            payment_status = "paid" if session.payment_status == "paid" else "pending"
+            update_data = {
+                "payment_status": payment_status
+            }
+            
+            await db.payment_transactions.update_one(
+                {"session_id": session_id},
+                {"$set": update_data}
             )
+            
+            # Update booking if payment successful
+            if payment_status == "paid" and payment_transaction.get("booking_id"):
+                await db.bookings.update_one(
+                    {"id": payment_transaction["booking_id"]},
+                    {"$set": {"payment_status": "paid", "booking_status": "confirmed"}}
+                )
+        
+        return {
+            "session_id": session_id,
+            "payment_status": session.payment_status,
+            "status": session.status,
+            "amount_total": session.amount_total,
+            "currency": session.currency
+        }
     
-    return {
-        "session_id": session_id,
-        "payment_status": status_response.payment_status,
-        "status": status_response.status,
-        "amount_total": status_response.amount_total,
-        "currency": status_response.currency
-    }
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
 
 # Dashboard endpoints
 @api_router.get("/dashboard/owner")
