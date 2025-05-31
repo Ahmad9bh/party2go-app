@@ -503,12 +503,13 @@ async def get_owner_dashboard(current_user: User = Depends(get_current_user)):
 
 @api_router.get("/dashboard/user")
 async def get_user_dashboard(current_user: User = Depends(get_current_user)):
-    bookings = await db.bookings.find({"user_email": current_user.email}).to_list(1000)
+    bookings_cursor = await db.bookings.find({"user_email": current_user.email}).to_list(1000)
+    bookings = mongo_doc_to_dict(bookings_cursor)
     
     # Get venue details for each booking
     for booking in bookings:
-        venue = await db.venues.find_one({"id": booking["venue_id"]})
-        booking["venue_details"] = venue
+        venue_doc = await db.venues.find_one({"id": booking["venue_id"]})
+        booking["venue_details"] = mongo_doc_to_dict(venue_doc)
     
     return {
         "bookings": bookings,
