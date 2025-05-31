@@ -1,20 +1,25 @@
 
 import requests
 import sys
-import time
+import json
 import uuid
 from datetime import datetime, timedelta
+import random
 
 class PartyVenueAPITester:
     def __init__(self, base_url="https://b50188aa-ef79-4083-9076-f7eb937c29b8.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
-        self.user = None
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_data = {}
+        self.user_data = None
+        self.venue_owner_data = None
+        self.admin_data = None
+        self.venue_id = None
+        self.booking_id = None
+        self.session_id = None
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
@@ -26,9 +31,14 @@ class PartyVenueAPITester:
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers)
+                if files:
+                    # For file uploads, don't use JSON
+                    headers.pop('Content-Type', None)
+                    response = requests.post(url, data=data, files=files, headers=headers)
+                else:
+                    response = requests.post(url, json=data, headers=headers)
             elif method == 'PUT':
                 response = requests.put(url, json=data, headers=headers)
             elif method == 'DELETE':
@@ -45,10 +55,10 @@ class PartyVenueAPITester:
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
                 try:
-                    error_detail = response.json()
-                    print(f"Error details: {error_detail}")
+                    error_detail = response.json().get('detail', 'No detail provided')
+                    print(f"Error: {error_detail}")
                 except:
-                    print(f"Response text: {response.text}")
+                    print(f"Response: {response.text}")
                 return False, {}
 
         except Exception as e:
@@ -57,54 +67,41 @@ class PartyVenueAPITester:
 
     def test_health_check(self):
         """Test the health check endpoint"""
-        success, response = self.run_test(
-            "Health Check",
-            "GET",
-            "health",
-            200
-        )
-        return success
+        return self.run_test("Health Check", "GET", "health", 200)
 
     def test_register_user(self, role="user"):
         """Test user registration"""
-        # Generate unique email to avoid conflicts
-        unique_id = str(uuid.uuid4())[:8]
-        email = f"test_{role}_{unique_id}@example.com"
-        password = "Test123!"
-        name = f"Test {role.capitalize()} {unique_id}"
+        # Generate unique username to avoid conflicts
+        username = f"test_{role}_{uuid.uuid4().hex[:8]}"
+        email = f"{username}@test.com"
+        
+        data = {
+            "name": f"Test {role.capitalize()}",
+            "email": email,
+            "password": "Test123!",
+            "role": role
+        }
         
         success, response = self.run_test(
             f"Register {role}",
             "POST",
             "auth/register",
-            200,
-            data={
-                "email": email,
-                "name": name,
-                "password": password,
-                "role": role
-            }
+            201,
+            data=data
         )
         
-        if success and 'access_token' in response:
-            self.token = response['access_token']
-            self.user = response['user']
-            self.test_data['user'] = {
-                'email': email,
-                'password': password,
-                'name': name,
-                'role': role,
-                'id': response['user']['id']
-            }
-            return True
-        return False
-
-    def test_login(self, email=None, password=None):
-        """Test login functionality"""
-        if not email and not password and 'user' in self.test_data:
-            email = self.test_data['user']['email']
-            password = self.test_data['user']['password']
+        if success:
+            if role == "user":
+                self.user_data = {"email": email, "password": "Test123!"}
+            elif role == "venue_owner":
+                self.venue_owner_data = {"email": email, "password": "Test123!"}
+            elif role == "admin":
+                self.admin_data = {"email": email, "password": "Test123!"}
         
+        return success, response
+
+    def test_login(self, email, password):
+        """Test login and get token"""
         success, response = self.run_test(
             "Login",
             "POST",
@@ -115,278 +112,192 @@ class PartyVenueAPITester:
         
         if success and 'access_token' in response:
             self.token = response['access_token']
-            self.user = response['user']
-            return True
-        return False
+            return True, response
+        return False, response
 
     def test_get_current_user(self):
         """Test getting current user info"""
-        success, response = self.run_test(
-            "Get Current User",
-            "GET",
-            "auth/me",
-            200
-        )
-        return success
+        return self.run_test("Get Current User", "GET", "auth/me", 200)
 
     def test_create_venue(self):
         """Test venue creation"""
-        if self.user['role'] not in ['venue_owner', 'admin']:
-            print("⚠️ Skipping venue creation - user is not a venue owner or admin")
-            return False
-        
-        venue_data = {
-            "name": f"Test Venue {str(uuid.uuid4())[:8]}",
-            "description": "A beautiful venue for testing purposes",
-            "location": "123 Test Street, New York, NY",
-            "price_per_day": 1000.0,
+        data = {
+            "name": f"Test Venue {uuid.uuid4().hex[:6]}",
+            "description": "A beautiful venue for testing",
+            "location": "123 Test Street, Test City",
+            "price_per_hour": 100.0,
             "capacity": 100,
             "event_types": ["wedding", "birthday", "corporate"],
             "amenities": ["parking", "wifi", "catering"],
-            "availability": [
-                (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
-                for i in range(1, 30)
-            ]
+            "lat": 40.7128,
+            "lng": -74.0060,
+            "images": []
         }
         
         success, response = self.run_test(
             "Create Venue",
             "POST",
             "venues",
-            200,
-            data=venue_data
+            201,
+            data=data
         )
         
-        if success:
-            self.test_data['venue'] = response
-            return True
-        return False
+        if success and 'id' in response:
+            self.venue_id = response['id']
+        
+        return success, response
 
     def test_get_venues(self):
-        """Test getting venues list"""
-        success, response = self.run_test(
-            "Get Venues",
-            "GET",
-            "venues",
-            200
-        )
-        
-        if success and isinstance(response, list):
-            print(f"Found {len(response)} venues")
-            return True
-        return False
+        """Test getting all venues"""
+        return self.run_test("Get All Venues", "GET", "venues", 200)
 
-    def test_get_venue_by_id(self):
-        """Test getting a venue by ID"""
-        if 'venue' not in self.test_data:
-            print("⚠️ Skipping get venue by ID - no venue created yet")
-            return False
+    def test_get_venue(self):
+        """Test getting a specific venue"""
+        if not self.venue_id:
+            print("❌ No venue ID available for testing")
+            return False, {}
         
-        venue_id = self.test_data['venue']['id']
-        success, response = self.run_test(
-            "Get Venue by ID",
-            "GET",
-            f"venues/{venue_id}",
-            200
-        )
-        return success
+        return self.run_test("Get Venue", "GET", f"venues/{self.venue_id}", 200)
 
     def test_create_booking(self):
         """Test booking creation"""
-        if 'venue' not in self.test_data:
-            print("⚠️ Skipping booking creation - no venue created yet")
-            return False
+        if not self.venue_id:
+            print("❌ No venue ID available for testing")
+            return False, {}
         
-        venue = self.test_data['venue']
-        booking_data = {
-            "venue_id": venue['id'],
-            "user_name": self.user['name'],
-            "user_email": self.user['email'],
-            "event_date": venue['availability'][0],
-            "event_type": venue['event_types'][0],
-            "message": "This is a test booking"
+        # Book for tomorrow
+        tomorrow = datetime.now() + timedelta(days=1)
+        event_date = tomorrow.strftime("%Y-%m-%d")
+        
+        data = {
+            "venue_id": self.venue_id,
+            "event_date": event_date,
+            "start_time": "14:00",
+            "end_time": "18:00",
+            "guest_count": 50,
+            "event_type": "birthday",
+            "special_requests": "Test booking"
         }
         
         success, response = self.run_test(
             "Create Booking",
             "POST",
             "bookings",
-            200,
-            data=booking_data
+            201,
+            data=data
         )
         
-        if success and 'booking' in response:
-            self.test_data['booking'] = response['booking']
-            return True
-        return False
+        if success and 'id' in response:
+            self.booking_id = response['id']
+            if 'checkout_url' in response and 'session_id' in response:
+                self.session_id = response['session_id']
+        
+        return success, response
 
-    def test_create_payment_session(self):
-        """Test creating a payment session"""
-        if 'booking' not in self.test_data:
-            print("⚠️ Skipping payment session creation - no booking created yet")
-            return False
-        
-        booking_id = self.test_data['booking']['id']
-        success, response = self.run_test(
-            "Create Payment Session",
-            "POST",
-            f"bookings/{booking_id}/payment",
-            200
-        )
-        
-        if success and 'checkout_url' in response:
-            self.test_data['payment'] = response
-            return True
-        return False
+    def test_get_bookings(self):
+        """Test getting all bookings"""
+        return self.run_test("Get All Bookings", "GET", "bookings", 200)
 
-    def test_get_payment_status(self):
-        """Test getting payment status"""
-        if 'payment' not in self.test_data:
-            print("⚠️ Skipping payment status check - no payment session created yet")
-            return False
+    def test_get_booking(self):
+        """Test getting a specific booking"""
+        if not self.booking_id:
+            print("❌ No booking ID available for testing")
+            return False, {}
         
-        session_id = self.test_data['payment']['session_id']
-        success, response = self.run_test(
-            "Get Payment Status",
-            "GET",
-            f"payments/status/{session_id}",
-            200
-        )
-        return success
+        return self.run_test("Get Booking", "GET", f"bookings/{self.booking_id}", 200)
+
+    def test_payment_status(self):
+        """Test payment status endpoint"""
+        if not self.session_id:
+            print("❌ No session ID available for testing")
+            return False, {}
+        
+        return self.run_test("Get Payment Status", "GET", f"payments/status/{self.session_id}", 200)
 
     def test_user_dashboard(self):
-        """Test user dashboard"""
-        if self.user['role'] != 'user' and self.user['role'] != 'admin':
-            print("⚠️ Skipping user dashboard - user is not a regular user")
-            return True  # Not a failure
-        
-        success, response = self.run_test(
-            "User Dashboard",
-            "GET",
-            "dashboard/user",
-            200
-        )
-        return success
+        """Test user dashboard endpoint"""
+        return self.run_test("Get User Dashboard", "GET", "dashboard/user", 200)
 
     def test_owner_dashboard(self):
-        """Test venue owner dashboard"""
-        if self.user['role'] != 'venue_owner' and self.user['role'] != 'admin':
-            print("⚠️ Skipping owner dashboard - user is not a venue owner")
-            return True  # Not a failure
-        
-        success, response = self.run_test(
-            "Owner Dashboard",
-            "GET",
-            "dashboard/owner",
-            200
-        )
-        return success
+        """Test venue owner dashboard endpoint"""
+        return self.run_test("Get Owner Dashboard", "GET", "dashboard/owner", 200)
 
     def test_admin_dashboard(self):
-        """Test admin dashboard"""
-        if self.user['role'] != 'admin':
-            print("⚠️ Skipping admin dashboard - user is not an admin")
-            return True  # Not a failure
-        
-        success, response = self.run_test(
-            "Admin Dashboard",
-            "GET",
-            "dashboard/admin",
-            200
-        )
-        return success
+        """Test admin dashboard endpoint"""
+        return self.run_test("Get Admin Dashboard", "GET", "dashboard/admin", 200)
 
     def test_geocode(self):
         """Test geocoding endpoint"""
-        success, response = self.run_test(
+        return self.run_test(
             "Geocode Address",
             "POST",
             "geocode",
             200,
-            data="New York, NY"
+            data="123 Main St, New York, NY"
         )
-        return success
 
 def main():
     # Setup
     tester = PartyVenueAPITester()
     
     # Test health check
-    if not tester.test_health_check():
-        print("❌ Health check failed, stopping tests")
-        return 1
-
-    # Test user registration and authentication
+    tester.test_health_check()
+    
+    # Test user registration and login
     print("\n=== Testing Authentication ===")
-    if not tester.test_register_user(role="user"):
-        print("❌ User registration failed, stopping tests")
-        return 1
+    success_user, _ = tester.test_register_user("user")
+    if success_user:
+        tester.test_login(tester.user_data["email"], tester.user_data["password"])
+        tester.test_get_current_user()
     
-    if not tester.test_get_current_user():
-        print("❌ Get current user failed")
+    # Test venue owner registration and login
+    success_owner, _ = tester.test_register_user("venue_owner")
+    if success_owner:
+        tester.test_login(tester.venue_owner_data["email"], tester.venue_owner_data["password"])
+        tester.test_get_current_user()
+        
+        # Test venue creation and retrieval
+        print("\n=== Testing Venue Management ===")
+        tester.test_create_venue()
+        tester.test_get_venues()
+        tester.test_get_venue()
     
-    if not tester.test_login():
-        print("❌ Login failed")
-
-    # Test user dashboard
-    print("\n=== Testing User Dashboard ===")
-    tester.test_user_dashboard()
+    # Test user booking flow
+    if success_user and tester.venue_id:
+        print("\n=== Testing Booking System ===")
+        tester.test_login(tester.user_data["email"], tester.user_data["password"])
+        tester.test_create_booking()
+        tester.test_get_bookings()
+        tester.test_get_booking()
+        if tester.session_id:
+            tester.test_payment_status()
     
-    # Test venue owner functionality
-    print("\n=== Testing Venue Owner Functionality ===")
-    # Register a venue owner
-    venue_owner_tester = PartyVenueAPITester()
-    if not venue_owner_tester.test_register_user(role="venue_owner"):
-        print("❌ Venue owner registration failed")
-    else:
-        # Create a venue
-        if not venue_owner_tester.test_create_venue():
-            print("❌ Venue creation failed")
-        else:
-            # Test venue retrieval
-            venue_owner_tester.test_get_venues()
-            venue_owner_tester.test_get_venue_by_id()
-            
-            # Test owner dashboard
-            venue_owner_tester.test_owner_dashboard()
-            
-            # Test booking flow as a user
-            if not tester.test_login():
-                print("❌ User login failed")
-            else:
-                # Use the venue created by the venue owner
-                tester.test_data['venue'] = venue_owner_tester.test_data['venue']
-                
-                # Create a booking
-                if not tester.test_create_booking():
-                    print("❌ Booking creation failed")
-                else:
-                    # Create a payment session
-                    if not tester.test_create_payment_session():
-                        print("❌ Payment session creation failed")
-                    else:
-                        # Check payment status
-                        tester.test_get_payment_status()
+    # Test dashboards
+    print("\n=== Testing Dashboards ===")
     
-    # Test admin functionality
-    print("\n=== Testing Admin Functionality ===")
-    admin_tester = PartyVenueAPITester()
-    if not admin_tester.test_register_user(role="admin"):
-        print("❌ Admin registration failed")
-    else:
-        admin_tester.test_admin_dashboard()
+    # User dashboard
+    if success_user:
+        tester.test_login(tester.user_data["email"], tester.user_data["password"])
+        tester.test_user_dashboard()
+    
+    # Owner dashboard
+    if success_owner:
+        tester.test_login(tester.venue_owner_data["email"], tester.venue_owner_data["password"])
+        tester.test_owner_dashboard()
+    
+    # Admin dashboard - register admin if needed
+    success_admin, _ = tester.test_register_user("admin")
+    if success_admin:
+        tester.test_login(tester.admin_data["email"], tester.admin_data["password"])
+        tester.test_admin_dashboard()
+    
+    # Test geocoding
+    print("\n=== Testing Geocoding ===")
+    tester.test_geocode()
     
     # Print results
-    print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
-    print(f"📊 Venue owner tests passed: {venue_owner_tester.tests_passed}/{venue_owner_tester.tests_run}")
-    print(f"📊 Admin tests passed: {admin_tester.tests_passed}/{admin_tester.tests_run}")
-    
-    total_passed = tester.tests_passed + venue_owner_tester.tests_passed + admin_tester.tests_passed
-    total_run = tester.tests_run + venue_owner_tester.tests_run + admin_tester.tests_run
-    
-    print(f"\n📊 Total tests passed: {total_passed}/{total_run} ({(total_passed/total_run)*100:.2f}%)")
-    
-    return 0 if total_passed == total_run else 1
+    print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run} ({tester.tests_passed/tester.tests_run*100:.1f}%)")
+    return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
     sys.exit(main())
