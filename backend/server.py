@@ -293,15 +293,17 @@ async def get_venues(
     if min_capacity is not None:
         query["capacity"] = {"$gte": min_capacity}
     
-    venues = await db.venues.find(query).to_list(100)
+    venues_cursor = await db.venues.find(query).to_list(100)
+    venues = mongo_doc_to_dict(venues_cursor)
     return [Venue(**venue) for venue in venues]
 
 @api_router.get("/venues/{venue_id}", response_model=Venue)
 async def get_venue(venue_id: str):
-    venue = await db.venues.find_one({"id": venue_id})
-    if not venue:
+    venue_doc = await db.venues.find_one({"id": venue_id})
+    if not venue_doc:
         raise HTTPException(status_code=404, detail="Venue not found")
-    return Venue(**venue)
+    venue_dict = mongo_doc_to_dict(venue_doc)
+    return Venue(**venue_dict)
 
 @api_router.post("/venues/{venue_id}/upload-images")
 async def upload_venue_images(
