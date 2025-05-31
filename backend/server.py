@@ -187,11 +187,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if email is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")
         
-        user = await db.users.find_one({"email": email})
-        if user is None:
+        user_doc = await db.users.find_one({"email": email})
+        if user_doc is None:
             raise HTTPException(status_code=401, detail="User not found")
         
-        return User(**user)
+        user_dict = mongo_doc_to_dict(user_doc)
+        return User(**user_dict)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
