@@ -201,32 +201,6 @@ def calculate_fees(amount: float):
     return service_fee, owner_payout
 
 # Auth endpoints
-@api_router.post("/auth/register", response_model=Token)
-async def register(user_data: UserCreate):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Hash password and create user
-    hashed_password = get_password_hash(user_data.password)
-    user = User(
-        email=user_data.email,
-        name=user_data.name,
-        role=user_data.role,
-        password_hash=hashed_password
-    )
-    
-    await db.users.insert_one(user.dict())
-    
-    # Create access token
-    access_token = create_access_token(data={"sub": user.email, "role": user.role})
-    
-    user_dict = user.dict()
-    user_dict.pop('password_hash', None)
-    
-    return Token(access_token=access_token, token_type="bearer", user=user_dict)
-
 @api_router.post("/auth/login", response_model=Token)
 async def login(login_data: UserLogin):
     user_doc = await db.users.find_one({"email": login_data.email})
