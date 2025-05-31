@@ -350,7 +350,7 @@ async def upload_venue_images(
 
 # Booking endpoints
 @api_router.post("/bookings")
-async def create_booking(booking_data: BookingCreate):
+async def create_booking(booking_data: BookingCreate, current_user: User = Depends(get_current_user)):
     venue_doc = await db.venues.find_one({"id": booking_data.venue_id})
     if not venue_doc:
         raise HTTPException(status_code=404, detail="Venue not found")
@@ -367,6 +367,7 @@ async def create_booking(booking_data: BookingCreate):
     
     booking = Booking(
         **booking_data.dict(),
+        user_id=current_user.id,  # Add the authenticated user's ID
         total_amount=total_amount,
         service_fee=service_fee,
         owner_payout=owner_payout
