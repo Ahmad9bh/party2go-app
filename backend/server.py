@@ -229,15 +229,17 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(login_data: UserLogin):
-    user = await db.users.find_one({"email": login_data.email})
-    if not user or not verify_password(login_data.password, user["password_hash"]):
+    user_doc = await db.users.find_one({"email": login_data.email})
+    if not user_doc or not verify_password(login_data.password, user_doc["password_hash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     
-    access_token = create_access_token(data={"sub": user["email"], "role": user["role"]})
+    access_token = create_access_token(data={"sub": user_doc["email"], "role": user_doc["role"]})
     
-    user.pop('password_hash', None)
+    # Convert MongoDB document to clean dict
+    user_dict = mongo_doc_to_dict(user_doc)
+    user_dict.pop('password_hash', None)
     
-    return Token(access_token=access_token, token_type="bearer", user=user)
+    return Token(access_token=access_token, token_type="bearer", user=user_dict)
 
 @api_router.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
