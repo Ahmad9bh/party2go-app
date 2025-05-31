@@ -351,9 +351,11 @@ async def upload_venue_images(
 # Booking endpoints
 @api_router.post("/bookings")
 async def create_booking(booking_data: BookingCreate):
-    venue = await db.venues.find_one({"id": booking_data.venue_id})
-    if not venue:
+    venue_doc = await db.venues.find_one({"id": booking_data.venue_id})
+    if not venue_doc:
         raise HTTPException(status_code=404, detail="Venue not found")
+    
+    venue = mongo_doc_to_dict(venue_doc)
     
     # Check if date is available
     if booking_data.event_date not in venue.get("availability", []):
@@ -371,7 +373,8 @@ async def create_booking(booking_data: BookingCreate):
     )
     
     await db.bookings.insert_one(booking.dict())
-    return {"booking": booking.dict(), "message": "Booking created successfully"}
+    booking_dict = mongo_doc_to_dict(booking.dict())
+    return {"booking": booking_dict, "message": "Booking created successfully"}
 
 @api_router.post("/bookings/{booking_id}/payment")
 async def create_payment_session(booking_id: str, request: Request):
