@@ -479,11 +479,13 @@ async def get_owner_dashboard(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Access denied")
     
     # Get venues
-    venues = await db.venues.find({"owner_id": current_user.id}).to_list(100)
+    venues_cursor = await db.venues.find({"owner_id": current_user.id}).to_list(100)
+    venues = mongo_doc_to_dict(venues_cursor)
     
     # Get bookings for owner's venues
     venue_ids = [venue["id"] for venue in venues]
-    bookings = await db.bookings.find({"venue_id": {"$in": venue_ids}}).to_list(1000)
+    bookings_cursor = await db.bookings.find({"venue_id": {"$in": venue_ids}}).to_list(1000)
+    bookings = mongo_doc_to_dict(bookings_cursor)
     
     # Calculate earnings
     total_earnings = sum(booking["owner_payout"] for booking in bookings if booking["payment_status"] == "paid")
