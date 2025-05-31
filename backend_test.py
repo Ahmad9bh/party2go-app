@@ -86,7 +86,7 @@ class PartyVenueAPITester:
             f"Register {role}",
             "POST",
             "auth/register",
-            200,  # Changed from 201 to 200 based on actual API response
+            200,
             data=data
         )
         
@@ -125,7 +125,7 @@ class PartyVenueAPITester:
             "name": f"Test Venue {uuid.uuid4().hex[:6]}",
             "description": "A beautiful venue for testing",
             "location": "123 Test Street, Test City",
-            "price_per_hour": 100.0,
+            "price_per_day": 1000.0,  # Changed from price_per_hour to price_per_day
             "capacity": 100,
             "event_types": ["wedding", "birthday", "corporate"],
             "amenities": ["parking", "wifi", "catering"],
@@ -230,10 +230,10 @@ class PartyVenueAPITester:
         """Test geocoding endpoint"""
         return self.run_test(
             "Geocode Address",
-            "GET",  # Changed from POST to GET
+            "POST",  # Changed from GET to POST
             "geocode",
             200,
-            params={"address": "123 Main St, New York, NY"}  # Using params instead of data
+            data={"address": "123 Main St, New York, NY"}  # Using data instead of params
         )
 
 def main():
