@@ -523,13 +523,24 @@ async def get_admin_dashboard(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Get all data
-    users = await db.users.find().to_list(1000)
-    venues = await db.venues.find().to_list(1000)
-    bookings = await db.bookings.find().to_list(1000)
-    transactions = await db.payment_transactions.find().to_list(1000)
+    users_cursor = await db.users.find().to_list(1000)
+    users = mongo_doc_to_dict(users_cursor)
+    
+    venues_cursor = await db.venues.find().to_list(1000)
+    venues = mongo_doc_to_dict(venues_cursor)
+    
+    bookings_cursor = await db.bookings.find().to_list(1000)
+    bookings = mongo_doc_to_dict(bookings_cursor)
+    
+    transactions_cursor = await db.payment_transactions.find().to_list(1000)
+    transactions = mongo_doc_to_dict(transactions_cursor)
     
     # Calculate platform earnings
     platform_earnings = sum(t["service_fee"] for t in transactions if t["payment_status"] == "paid")
+    
+    # Remove password hashes from users
+    for user in users:
+        user.pop('password_hash', None)
     
     return {
         "total_users": len(users),
