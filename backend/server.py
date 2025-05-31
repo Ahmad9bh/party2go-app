@@ -138,6 +138,32 @@ class PaymentTransaction(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 # Helper functions
+def mongo_doc_to_dict(doc):
+    """Convert MongoDB document to dict, removing _id and converting ObjectId"""
+    if doc is None:
+        return None
+    
+    if isinstance(doc, list):
+        return [mongo_doc_to_dict(item) for item in doc]
+    
+    if isinstance(doc, dict):
+        # Remove MongoDB's _id field and convert any ObjectId fields
+        result = {}
+        for key, value in doc.items():
+            if key == '_id':
+                continue  # Skip MongoDB's _id field
+            elif hasattr(value, '__dict__') and 'ObjectId' in str(type(value)):
+                result[key] = str(value)  # Convert ObjectId to string
+            elif isinstance(value, list):
+                result[key] = [mongo_doc_to_dict(item) for item in value]
+            elif isinstance(value, dict):
+                result[key] = mongo_doc_to_dict(value)
+            else:
+                result[key] = value
+        return result
+    
+    return doc
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
