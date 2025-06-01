@@ -254,7 +254,7 @@ const HomePage = () => {
       <section className="py-16 bg-gradient-to-r from-teal-400 to-pink-500 text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Host Your Dream Event? 🌟</h2>
-          <p className="text-xl mb-8">Join thousands of happy customers who found their perfect venue with Party!</p>
+          <p className="text-xl mb-8">Join thousands of happy customers who found their perfect venue with Party2go!</p>
           <div className="space-x-4">
             <Link to="/venues" className="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition">
               Browse Venues
