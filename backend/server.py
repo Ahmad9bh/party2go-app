@@ -40,7 +40,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 # Create the main app
-app = FastAPI(title="Party Venue Booking API")
+app = FastAPI(title="Party2go Venue Booking API")
 api_router = APIRouter(prefix="/api")
 
 # Models
