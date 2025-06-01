@@ -164,6 +164,9 @@ class Party2GoAPITester:
 def main():
     # Setup
     tester = Party2GoAPITester()
+    test_email = f"test_{datetime.now().strftime('%H%M%S')}@example.com"
+    test_password = "TestPass123!"
+    test_name = "Test User"
     
     # Run tests
     print("\n🚀 Starting Party2Go API Tests...\n")
@@ -176,6 +179,13 @@ def main():
     if not tester.test_get_venue_details():
         print("❌ Failed to get venue details or price validation failed")
         return 1
+    
+    # Register and login for booking test
+    if not tester.test_register(test_email, test_password, test_name):
+        print("❌ Registration failed, continuing without authentication")
+    else:
+        if not tester.test_login(test_email, test_password):
+            print("❌ Login failed, continuing without authentication")
     
     # Test booking creation
     if not tester.test_create_booking():
