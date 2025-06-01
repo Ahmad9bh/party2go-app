@@ -582,7 +582,7 @@ async def geocode_address(address: str):
 # Health check
 @api_router.get("/health")
 async def health_check():
-    return {"status": "healthy", "message": "Party Venue Booking API is running"}
+    return {"status": "healthy", "message": "Party2go Venue Booking API is running"}
 
 # Include the router in the main app
 app.include_router(api_router)
