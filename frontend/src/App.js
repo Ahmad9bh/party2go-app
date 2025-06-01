@@ -572,7 +572,7 @@ const LoginPage = () => {
       <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back! 🎉</h1>
-          <p className="text-gray-600">Sign in to your Party account</p>
+          <p className="text-gray-600">Sign in to your Party2go account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
