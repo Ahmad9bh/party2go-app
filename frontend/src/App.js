@@ -157,7 +157,7 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-black/30"></div>
         <img 
           src="https://images.pexels.com/photos/11282246/pexels-photo-11282246.jpeg" 
-          alt="Party venue" 
+          alt="Party2go venue" 
           className="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
         />
         <div className="relative z-10 text-center max-w-4xl mx-auto px-4">
