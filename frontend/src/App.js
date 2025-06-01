@@ -523,7 +523,7 @@ const VenueDetail = () => {
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-purple-600">${venue.price_per_hour}/hour</div>
+                <div className="text-3xl font-bold text-purple-600">${venue.price_per_hour || venue.price_per_day || 100}/hour</div>
                 <div className="text-sm text-gray-500">Starting price</div>
               </div>
             </div>
