@@ -67,7 +67,7 @@ const Header = () => {
     <header className="bg-gradient-to-r from-pink-500 via-purple-500 to-teal-500 text-white shadow-lg">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link to="/" className="text-3xl font-bold flex items-center">
-          🎉 Party
+          🎉 Party2go
         </Link>
         
         <nav className="hidden md:flex space-x-6">
