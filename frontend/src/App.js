@@ -751,15 +751,15 @@ const BookingForm = ({ venue, onClose }) => {
             <div className="text-sm text-gray-600">
               <div className="flex justify-between">
                 <span>Base rate (4 hours):</span>
-                <span>${(venue.price_per_hour * 4).toFixed(2)}</span>
+                <span>${((venue.price_per_hour || venue.price_per_day || 100) * 4).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Service fee (2.5%):</span>
-                <span>${(venue.price_per_hour * 4 * 0.025).toFixed(2)}</span>
+                <span>${((venue.price_per_hour || venue.price_per_day || 100) * 4 * 0.025).toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-semibold border-t pt-2 mt-2">
                 <span>Total estimate:</span>
-                <span>${(venue.price_per_hour * 4 * 1.025).toFixed(2)}</span>
+                <span>${((venue.price_per_hour || venue.price_per_day || 100) * 4 * 1.025).toFixed(2)}</span>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
