@@ -1302,6 +1302,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/venues" element={<VenueList />} />
+              <Route path="/venues/:id" element={<VenueDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
