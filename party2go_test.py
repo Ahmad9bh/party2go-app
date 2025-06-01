@@ -185,10 +185,11 @@ def main():
     
     # Register and login for booking test
     if not tester.test_register(test_email, test_password, test_name):
-        print("❌ Registration failed, continuing without authentication")
-    else:
+        print("❌ Registration failed, trying login")
         if not tester.test_login(test_email, test_password):
             print("❌ Login failed, continuing without authentication")
+    else:
+        print("✅ Registration successful with token")
     
     # Test booking creation
     if not tester.test_create_booking():
