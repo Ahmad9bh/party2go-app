@@ -140,8 +140,8 @@ class Party2GoAPITester:
         price_per_hour = venue.get('price_per_hour') or venue.get('price_per_day') or 100
         
         booking_data = {
-            "name": "Test User",
-            "email": "test@example.com",
+            "user_name": "Test User",
+            "user_email": "test@example.com",
             "event_date": tomorrow,
             "event_type": "birthday",
             "guests": "50",
