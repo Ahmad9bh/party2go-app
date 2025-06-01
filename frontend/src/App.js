@@ -616,14 +616,15 @@ const BookingForm = ({ venue, onClose }) => {
     setLoading(true);
     
     try {
+      const pricePerHour = venue.price_per_hour || venue.price_per_day || 100;
       const bookingData = {
         ...formData,
         venue_id: venue.id,
         venue_name: venue.name,
-        price_per_hour: venue.price_per_hour,
-        total_amount: venue.price_per_hour * 4, // Assuming 4 hours default
-        service_fee: venue.price_per_hour * 4 * 0.025,
-        owner_payout: venue.price_per_hour * 4 * 0.975
+        price_per_hour: pricePerHour,
+        total_amount: pricePerHour * 4, // Assuming 4 hours default
+        service_fee: pricePerHour * 4 * 0.025,
+        owner_payout: pricePerHour * 4 * 0.975
       };
 
       await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/bookings`, bookingData);
