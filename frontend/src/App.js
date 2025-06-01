@@ -438,6 +438,357 @@ const VenueList = () => {
   );
 };
 
+const VenueDetail = () => {
+  const { id } = useParams();
+  const [venue, setVenue] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchVenue();
+  }, [id]);
+
+  const fetchVenue = async () => {
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/venues/${id}`);
+      setVenue(response.data);
+    } catch (error) {
+      setError('Venue not found');
+      console.error('Error fetching venue:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 flex items-center justify-center">
+        <div className="text-2xl text-gray-600">Loading venue details...</div>
+      </div>
+    );
+  }
+
+  if (error || !venue) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Venue Not Found</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/venues')}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+          >
+            Back to Venues
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 py-8">
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/venues')}
+            className="text-purple-600 hover:text-purple-800 mb-4 flex items-center"
+          >
+            ← Back to Venues
+          </button>
+        </div>
+
+        {/* Venue Details */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Image */}
+          {venue.image_url && (
+            <div className="h-96 bg-gray-200">
+              <img
+                src={venue.image_url}
+                alt={venue.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <div className="p-8">
+            {/* Title and Price */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-800 mb-2">{venue.name}</h1>
+                <p className="text-xl text-gray-600 flex items-center">
+                  📍 {venue.location}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-purple-600">${venue.price_per_hour}/hour</div>
+                <div className="text-sm text-gray-500">Starting price</div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-4">About This Venue</h3>
+              <p className="text-gray-700 leading-relaxed">{venue.description}</p>
+            </div>
+
+            {/* Amenities */}
+            {venue.amenities && venue.amenities.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-2xl font-semibold text-gray-800 mb-4">Amenities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {venue.amenities.map((amenity, index) => (
+                    <div key={index} className="flex items-center text-gray-700">
+                      <span className="text-green-500 mr-2">✓</span>
+                      {amenity}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Details */}
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Venue Details</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Event Types:</span>
+                    <span className="text-gray-800">{venue.event_types?.join(', ') || 'All events'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Capacity:</span>
+                    <span className="text-gray-800">{venue.capacity || 'Contact for details'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Rating:</span>
+                    <span className="text-gray-800">⭐ {venue.rating || 4.5}/5</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Contact & Booking</h3>
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setShowBookingForm(true)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition"
+                  >
+                    Book This Venue 🎉
+                  </button>
+                  <p className="text-sm text-gray-500 text-center">
+                    No payment required now. Owner will contact you with details.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Booking Form Modal */}
+        {showBookingForm && (
+          <BookingForm
+            venue={venue}
+            onClose={() => setShowBookingForm(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const BookingForm = ({ venue, onClose }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    event_date: '',
+    event_type: '',
+    guests: '',
+    message: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const bookingData = {
+        ...formData,
+        venue_id: venue.id,
+        venue_name: venue.name,
+        price_per_hour: venue.price_per_hour,
+        total_amount: venue.price_per_hour * 4, // Assuming 4 hours default
+        service_fee: venue.price_per_hour * 4 * 0.025,
+        owner_payout: venue.price_per_hour * 4 * 0.975
+      };
+
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/bookings`, bookingData);
+      setSuccess(true);
+    } catch (error) {
+      console.error('Booking error:', error);
+      alert('Failed to submit booking request. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">Booking Request Sent!</h3>
+            <p className="text-gray-600 mb-6">
+              We've sent your booking request to the venue owner. They'll contact you within 24 hours with confirmation and payment details.
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">Book {venue.name}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-2">Full Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Email *</label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-2">Event Date *</label>
+              <input
+                type="date"
+                required
+                value={formData.event_date}
+                onChange={(e) => setFormData({...formData, event_date: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Event Type *</label>
+              <select
+                required
+                value={formData.event_type}
+                onChange={(e) => setFormData({...formData, event_type: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="">Select event type</option>
+                <option value="wedding">Wedding</option>
+                <option value="birthday">Birthday Party</option>
+                <option value="graduation">Graduation</option>
+                <option value="corporate">Corporate Event</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2">Expected Guests</label>
+            <input
+              type="number"
+              value={formData.guests}
+              onChange={(e) => setFormData({...formData, guests: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Number of guests"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2">Special Message</label>
+            <textarea
+              value={formData.message}
+              onChange={(e) => setFormData({...formData, message: e.target.value})}
+              rows="4"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Any special requirements or questions..."
+            />
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-2">Pricing Estimate</h4>
+            <div className="text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Base rate (4 hours):</span>
+                <span>${(venue.price_per_hour * 4).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service fee (2.5%):</span>
+                <span>${(venue.price_per_hour * 4 * 0.025).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-2 mt-2">
+                <span>Total estimate:</span>
+                <span>${(venue.price_per_hour * 4 * 1.025).toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Final pricing will be confirmed by venue owner based on your specific requirements.
+            </p>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-lg hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50"
+            >
+              {loading ? 'Sending...' : 'Send Booking Request'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '', name: '', role: 'user' });
   const [loading, setLoading] = useState(false);
