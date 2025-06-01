@@ -465,8 +465,8 @@ const RegisterPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 to-teal-400 flex items-center justify-center px-4">
       <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Join the Party! 🎉</h1>
-          <p className="text-gray-600">Create your Party account</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Join the Party2go! 🎉</h1>
+          <p className="text-gray-600">Create your Party2go account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
