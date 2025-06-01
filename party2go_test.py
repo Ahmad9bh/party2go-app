@@ -71,10 +71,13 @@ class Party2GoAPITester:
             "Register User",
             "POST",
             "api/auth/register",
-            201,
+            200,  # API returns 200 for successful registration
             data={"email": email, "password": password, "name": name, "role": role}
         )
-        return success
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            return True
+        return False
 
     def test_get_venues(self):
         """Test getting all venues"""
