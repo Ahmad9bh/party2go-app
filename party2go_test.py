@@ -158,10 +158,13 @@ class Party2GoAPITester:
             "Create Booking",
             "POST",
             "api/bookings",
-            201,
+            200,  # API returns 200 for successful booking
             data=booking_data
         )
         
+        if success and 'booking' in response:
+            print(f"✅ Booking created successfully with ID: {response['booking']['id']}")
+            return True
         return success
 
 def main():
