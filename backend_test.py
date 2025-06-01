@@ -1,4 +1,3 @@
-
 import requests
 import sys
 import json
@@ -6,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 import random
 
-class PartyVenueAPITester:
+class Party2goVenueAPITester:
     def __init__(self, base_url="https://b50188aa-ef79-4083-9076-f7eb937c29b8.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
@@ -237,7 +236,7 @@ class PartyVenueAPITester:
 
 def main():
     # Setup
-    tester = PartyVenueAPITester()
+    tester = Party2goVenueAPITester()
     
     # Test health check
     tester.test_health_check()
