@@ -790,6 +790,281 @@ const BookingForm = ({ venue, onClose }) => {
   );
 };
 
+const VenueNew = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    location: '',
+    price_per_day: '',
+    capacity: '',
+    event_types: [],
+    amenities: [],
+    image_url: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const eventTypeOptions = ['wedding', 'birthday', 'graduation', 'corporate', 'anniversary', 'other'];
+  const amenityOptions = [
+    'Parking', 'WiFi', 'Sound System', 'Projector', 'Kitchen', 'Bar',
+    'Dance Floor', 'Garden/Outdoor Space', 'Air Conditioning', 'Catering',
+    'Photography Services', 'Decoration Services'
+  ];
+
+  useEffect(() => {
+    // Check if user is venue owner
+    if (!user || user.role !== 'venue_owner') {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
+  const handleEventTypeChange = (eventType) => {
+    setFormData(prev => ({
+      ...prev,
+      event_types: prev.event_types.includes(eventType)
+        ? prev.event_types.filter(type => type !== eventType)
+        : [...prev.event_types, eventType]
+    }));
+  };
+
+  const handleAmenityChange = (amenity) => {
+    setFormData(prev => ({
+      ...prev,
+      amenities: prev.amenities.includes(amenity)
+        ? prev.amenities.filter(a => a !== amenity)
+        : [...prev.amenities, amenity]
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const venueData = {
+        ...formData,
+        price_per_day: parseFloat(formData.price_per_day),
+        capacity: parseInt(formData.capacity) || null,
+        owner_id: user.id
+      };
+
+      const response = await axios.post(
+        `${process.env.REACT_APP_BACKEND_URL}/api/venues`,
+        venueData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (error) {
+      console.error('Error creating venue:', error);
+      setError(error.response?.data?.detail || 'Failed to create venue. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="text-6xl mb-4">🎉</div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Venue Created!</h2>
+          <p className="text-gray-600 mb-6">
+            Your venue has been successfully added to Party2go! It's now available for bookings.
+          </p>
+          <div className="text-sm text-gray-500">
+            Redirecting to your dashboard...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 py-8">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-purple-600 hover:text-purple-800 mb-4 flex items-center"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Add New Venue</h1>
+          <p className="text-gray-600">Create your venue listing on Party2go</p>
+        </div>
+
+        {/* Form */}
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Venue Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g., Grand Ballroom"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Location *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g., Downtown Los Angeles"
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Price per Day ($) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  step="0.01"
+                  value={formData.price_per_day}
+                  onChange={(e) => setFormData({...formData, price_per_day: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g., 1500"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Capacity (guests)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="e.g., 150"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Description *</label>
+              <textarea
+                required
+                rows="4"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Describe your venue, its features, and what makes it special..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Image URL</label>
+              <input
+                type="url"
+                value={formData.image_url}
+                onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="https://example.com/venue-image.jpg"
+              />
+              {formData.image_url && (
+                <div className="mt-3">
+                  <img
+                    src={formData.image_url}
+                    alt="Venue preview"
+                    className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Event Types */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-3">Event Types Supported</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {eventTypeOptions.map((eventType) => (
+                  <label key={eventType} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.event_types.includes(eventType)}
+                      onChange={() => handleEventTypeChange(eventType)}
+                      className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    />
+                    <span className="capitalize text-gray-700">{eventType}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Amenities */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-3">Amenities</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {amenityOptions.map((amenity) => (
+                  <label key={amenity} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.amenities.includes(amenity)}
+                      onChange={() => handleAmenityChange(amenity)}
+                      className="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700 text-sm">{amenity}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="flex gap-4 pt-6">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-400 transition font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-lg hover:from-purple-700 hover:to-pink-700 transition font-semibold disabled:opacity-50"
+              >
+                {loading ? 'Creating Venue...' : 'Create Venue 🎉'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '', name: '', role: 'user' });
   const [loading, setLoading] = useState(false);
