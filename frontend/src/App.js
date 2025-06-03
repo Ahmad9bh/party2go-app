@@ -894,10 +894,14 @@ const VenueNew = () => {
     try {
       const token = localStorage.getItem('token');
       const venueData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
         price_per_day: parseFloat(formData.price_per_day),
-        capacity: parseInt(formData.capacity) || null,
-        owner_id: user.id
+        capacity: parseInt(formData.capacity) || 50, // Default capacity if not provided
+        event_types: formData.event_types,
+        amenities: formData.amenities,
+        availability: [] // Backend expects this field
       };
 
       const response = await axios.post(
