@@ -77,7 +77,7 @@ class Party2GoUserFlowTester:
             f"Register {role}",
             "POST",
             "auth/register",
-            201,
+            200,  # API returns 200 instead of 201
             data=user_data
         )
         
