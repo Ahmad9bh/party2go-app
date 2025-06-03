@@ -279,16 +279,28 @@ const VenueList = () => {
     max_price: '',
     min_capacity: ''
   });
+  const location = useLocation();
 
   useEffect(() => {
-    fetchVenues();
-  }, []);
+    // Parse URL search parameters on component mount
+    const urlParams = new URLSearchParams(location.search);
+    const newFilters = { ...filters };
+    
+    urlParams.forEach((value, key) => {
+      if (key in newFilters) {
+        newFilters[key] = value;
+      }
+    });
+    
+    setFilters(newFilters);
+    fetchVenues(newFilters);
+  }, [location.search]);
 
-  const fetchVenues = async () => {
+  const fetchVenues = async (currentFilters = filters) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(currentFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
       
