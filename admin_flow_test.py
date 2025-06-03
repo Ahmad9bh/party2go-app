@@ -163,7 +163,11 @@ class Party2GoAdminFlowTester:
             role="admin"
         )
         
-        return response.get("venues", []) if success else []
+        if success:
+            if isinstance(response, list):
+                return response
+            return response.get("venues", [])
+        return []
 
     def get_all_bookings(self):
         """Get all bookings (admin only)"""
