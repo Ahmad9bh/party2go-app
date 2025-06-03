@@ -804,8 +804,9 @@ const VenueNew = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const eventTypeOptions = ['wedding', 'birthday', 'graduation', 'corporate', 'anniversary', 'other'];
   const amenityOptions = [
@@ -815,11 +816,57 @@ const VenueNew = () => {
   ];
 
   useEffect(() => {
-    // Check if user is venue owner
-    if (!user || user.role !== 'venue_owner') {
-      navigate('/login');
+    // Wait for authentication to load
+    if (user !== null || !isAuthenticated) {
+      setAuthLoading(false);
     }
-  }, [user, navigate]);
+  }, [user, isAuthenticated]);
+
+  useEffect(() => {
+    // Only redirect after we know the auth state
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        navigate('/login');
+      } else if (user && user.role !== 'venue_owner') {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, isAuthenticated, authLoading, navigate]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 flex items-center justify-center">
+        <div className="text-2xl text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show error if not venue owner
+  if (user && user.role !== 'venue_owner') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-teal-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-6">
+            Only venue owners can create venues. Please register as a venue owner to access this page.
+          </p>
+          <button
+            onClick={() => navigate('/register')}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition mr-4"
+          >
+            Register as Venue Owner
+          </button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleEventTypeChange = (eventType) => {
     setFormData(prev => ({
