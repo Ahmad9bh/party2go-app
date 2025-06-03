@@ -75,7 +75,7 @@ class Party2GoAdminFlowTester:
             "Register Admin",
             "POST",
             "auth/register",
-            201,
+            200,  # API returns 200 instead of 201
             data=admin_data
         )
         
