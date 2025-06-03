@@ -610,6 +610,8 @@ const BookingForm = ({ venue, onClose }) => {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [bookingId, setBookingId] = useState(null);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -627,7 +629,8 @@ const BookingForm = ({ venue, onClose }) => {
         owner_payout: pricePerHour * 4 * 0.975
       };
 
-      await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/bookings`, bookingData);
+      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/bookings`, bookingData);
+      setBookingId(response.data.id || response.data.booking_id);
       setSuccess(true);
     } catch (error) {
       console.error('Booking error:', error);
@@ -635,6 +638,11 @@ const BookingForm = ({ venue, onClose }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewBookings = () => {
+    onClose();
+    navigate('/dashboard');
   };
 
   if (success) {
@@ -647,12 +655,25 @@ const BookingForm = ({ venue, onClose }) => {
             <p className="text-gray-600 mb-6">
               We've sent your booking request to the venue owner. They'll contact you within 24 hours with confirmation and payment details.
             </p>
-            <button
-              onClick={onClose}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
-            >
-              Close
-            </button>
+            {bookingId && (
+              <p className="text-sm text-gray-500 mb-4">
+                Booking ID: {bookingId}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleViewBookings}
+                className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+              >
+                View My Bookings
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>
