@@ -187,7 +187,11 @@ class Party2GoAdminFlowTester:
             role="admin"
         )
         
-        return response.get("bookings", []) if success else []
+        if success:
+            if isinstance(response, list):
+                return response
+            return response.get("bookings", [])
+        return []
 
     def print_summary(self):
         """Print test summary"""
