@@ -111,7 +111,7 @@ const Header = () => {
           ) : (
             <div className="space-x-2">
               <Link to="/login" className="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-yellow-300 transition">
-                Login
+                Sign In
               </Link>
               <Link to="/register" className="bg-yellow-400 text-purple-800 px-4 py-2 rounded-lg font-semibold hover:bg-yellow-300 transition">
                 Sign Up
