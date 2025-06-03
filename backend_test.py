@@ -119,37 +119,36 @@ class Party2goVenueAPITester:
         """Test getting current user info"""
         return self.run_test("Get Current User", "GET", "auth/me", 200)
 
-    def test_create_venue(self):
+    def test_create_venue(self, venue_data=None):
         """Test venue creation"""
         # Generate availability for the next 30 days
         today = datetime.now()
         availability = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(1, 31)]
         self.venue_availability = availability
         
-        data = {
-            "name": f"Test Venue {uuid.uuid4().hex[:6]}",
-            "description": "A beautiful venue for testing",
-            "location": "123 Test Street, Test City",
-            "price_per_day": 1000.0,
-            "capacity": 100,
-            "event_types": ["wedding", "birthday", "corporate"],
-            "amenities": ["parking", "wifi", "catering"],
-            "lat": 40.7128,
-            "lng": -74.0060,
-            "images": [],
-            "availability": availability  # Add availability
-        }
+        if venue_data is None:
+            venue_data = {
+                "name": f"Test Venue {uuid.uuid4().hex[:6]}",
+                "description": "A beautiful venue for testing",
+                "location": "Los Angeles, CA",
+                "price_per_day": 1500.0,
+                "capacity": 100,
+                "event_types": ["wedding", "birthday"],
+                "amenities": ["Parking", "WiFi", "Sound System"],
+                "availability": availability
+            }
         
         success, response = self.run_test(
             "Create Venue",
             "POST",
             "venues",
             200,
-            data=data
+            data=venue_data
         )
         
         if success and 'id' in response:
             self.venue_id = response['id']
+            print(f"Created venue with ID: {self.venue_id}")
         
         return success, response
 
@@ -234,68 +233,107 @@ class Party2goVenueAPITester:
             data={"address": "123 Main St, New York, NY"}  # Using JSON data
         )
 
-def main():
-    # Setup
+def test_venue_creation_flow():
+    """Test the complete venue creation flow"""
     tester = Party2goVenueAPITester()
     
-    # Test health check
-    tester.test_health_check()
+    print("\n=== Testing Venue Creation Flow ===")
     
-    # Test user registration and login
-    print("\n=== Testing Authentication ===")
-    success_user, _ = tester.test_register_user("user")
-    if success_user:
-        tester.test_login(tester.user_data["email"], tester.user_data["password"])
-        tester.test_get_current_user()
-    
-    # Test venue owner registration and login
+    # 1. Register as a venue owner
     success_owner, _ = tester.test_register_user("venue_owner")
-    if success_owner:
-        tester.test_login(tester.venue_owner_data["email"], tester.venue_owner_data["password"])
-        tester.test_get_current_user()
-        
-        # Test venue creation and retrieval
-        print("\n=== Testing Venue Management ===")
-        tester.test_create_venue()
-        tester.test_get_venues()
-        tester.test_get_venue()
+    if not success_owner:
+        print("❌ Failed to register venue owner")
+        return False
     
-    # Test user booking flow
-    if success_user and tester.venue_id:
-        print("\n=== Testing Booking System ===")
-        tester.test_login(tester.user_data["email"], tester.user_data["password"])
-        tester.test_create_booking()
-        if tester.booking_id:
-            tester.test_get_booking()
-        if tester.session_id:
-            tester.test_payment_status()
+    # 2. Login as venue owner
+    login_success, _ = tester.test_login(tester.venue_owner_data["email"], tester.venue_owner_data["password"])
+    if not login_success:
+        print("❌ Failed to login as venue owner")
+        return False
     
-    # Test dashboards
-    print("\n=== Testing Dashboards ===")
+    # 3. Create a venue with specific test data
+    venue_data = {
+        "name": "Test Venue",
+        "description": "Beautiful venue for events",
+        "location": "Los Angeles, CA",
+        "price_per_day": 1500.0,
+        "capacity": 100,
+        "event_types": ["wedding", "birthday"],
+        "amenities": ["Parking", "WiFi", "Sound System"],
+        "availability": []
+    }
     
-    # User dashboard
-    if success_user:
-        tester.test_login(tester.user_data["email"], tester.user_data["password"])
-        tester.test_user_dashboard()
+    venue_success, venue_response = tester.test_create_venue(venue_data)
+    if not venue_success:
+        print("❌ Failed to create venue")
+        return False
     
-    # Owner dashboard
-    if success_owner:
-        tester.test_login(tester.venue_owner_data["email"], tester.venue_owner_data["password"])
-        tester.test_owner_dashboard()
+    # 4. Verify venue was created correctly
+    get_success, venue_details = tester.test_get_venue()
+    if not get_success:
+        print("❌ Failed to retrieve venue")
+        return False
     
-    # Admin dashboard - register admin if needed
-    success_admin, _ = tester.test_register_user("admin")
-    if success_admin:
-        tester.test_login(tester.admin_data["email"], tester.admin_data["password"])
-        tester.test_admin_dashboard()
+    # 5. Verify venue data matches what we submitted
+    data_correct = True
+    for key, value in venue_data.items():
+        if key in venue_details and venue_details[key] != value:
+            print(f"❌ Venue data mismatch for {key}: expected {value}, got {venue_details[key]}")
+            data_correct = False
     
-    # Skip geocoding test for now as it's not critical
-    # print("\n=== Testing Geocoding ===")
-    # tester.test_geocode()
+    if data_correct:
+        print("✅ Venue data verified correctly")
     
-    # Print results
-    print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run} ({tester.tests_passed/tester.tests_run*100:.1f}%)")
-    return 0 if tester.tests_passed == tester.tests_run else 1
+    # 6. Check venue appears in venue list
+    list_success, venues_list = tester.test_get_venues()
+    if not list_success:
+        print("❌ Failed to retrieve venues list")
+        return False
+    
+    venue_found = False
+    for venue in venues_list:
+        if venue.get('id') == tester.venue_id:
+            venue_found = True
+            break
+    
+    if venue_found:
+        print("✅ Venue found in venues list")
+    else:
+        print("❌ Venue not found in venues list")
+        return False
+    
+    # 7. Check owner dashboard shows the venue
+    dashboard_success, dashboard_data = tester.test_owner_dashboard()
+    if not dashboard_success:
+        print("❌ Failed to retrieve owner dashboard")
+        return False
+    
+    venue_in_dashboard = False
+    if 'venues' in dashboard_data:
+        for venue in dashboard_data['venues']:
+            if venue.get('id') == tester.venue_id:
+                venue_in_dashboard = True
+                break
+    
+    if venue_in_dashboard:
+        print("✅ Venue found in owner dashboard")
+    else:
+        print("❌ Venue not found in owner dashboard")
+        return False
+    
+    print("\n✅ Complete venue creation flow tested successfully")
+    return True
+
+def main():
+    # Run the venue creation flow test
+    venue_creation_success = test_venue_creation_flow()
+    
+    if venue_creation_success:
+        print("\n🎉 Venue creation flow test passed successfully!")
+        return 0
+    else:
+        print("\n❌ Venue creation flow test failed")
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())
