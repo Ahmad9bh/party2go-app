@@ -79,10 +79,10 @@ class Party2GoAdminFlowTester:
             data=admin_data
         )
         
-        if success and "token" in response:
-            self.tokens["admin"] = response["token"]
+        if success and "access_token" in response:
+            self.tokens["admin"] = response["access_token"]
             self.test_users["admin"] = admin_data
-            self.test_users["admin"]["id"] = response.get("user_id")
+            self.test_users["admin"]["id"] = response.get("user", {}).get("id")
             return True
         return False
 
