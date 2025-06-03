@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 import { loadStripe } from '@stripe/stripe-js';
