@@ -107,8 +107,8 @@ class Party2GoUserFlowTester:
             data=login_data
         )
         
-        if success and "token" in response:
-            self.tokens[role] = response["token"]
+        if success and "access_token" in response:
+            self.tokens[role] = response["access_token"]
             return True
         return False
 
