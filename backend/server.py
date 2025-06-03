@@ -562,6 +562,31 @@ async def get_admin_dashboard(current_user: User = Depends(get_current_user)):
         "recent_transactions": transactions[-10:]  # Last 10 transactions
     }
 
+# Admin endpoints for separate data access
+@api_router.get("/users")
+async def get_all_users(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    users_cursor = await db.users.find().to_list(1000)
+    users = mongo_doc_to_dict(users_cursor)
+    
+    # Remove password hashes from users
+    for user in users:
+        user.pop('password_hash', None)
+    
+    return {"users": users, "total": len(users)}
+
+@api_router.get("/bookings")
+async def get_all_bookings(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    bookings_cursor = await db.bookings.find().to_list(1000)
+    bookings = mongo_doc_to_dict(bookings_cursor)
+    
+    return {"bookings": bookings, "total": len(bookings)}
+
 # Geocoding endpoint
 @api_router.post("/geocode")
 async def geocode_address(address: str):
